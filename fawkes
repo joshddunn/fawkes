@@ -38,7 +38,7 @@ class Fawkes
   end
 
   def build
-    system("git clone https://github.com/joshddunn/fawkes #{options[:dir]}")
+    system("git clone https://github.com/joshddunn/docker-fawkes #{options[:dir]}")
     Dir.chdir(options[:dir])
     system("docker-compose run app mix phx.new . --module #{options[:name]}")
 
