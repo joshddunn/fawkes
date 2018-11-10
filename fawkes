@@ -1,0 +1,65 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+
+class Fawkes
+
+  attr_accessor :options
+  attr_reader :command
+
+  COMMANDS = [
+    'attach',
+    'build',
+    'rise',
+  ]
+
+  def initialize(string)
+    @args = string
+    @options = {
+      name: 'MyApp'
+    }
+    @command = (COMMANDS & [string.first]).first || 'build'
+
+    parse_options
+  end
+
+  def parse_options
+    OptionParser.new do |opt|
+      opt.on('-n NAME') { |o| options[:name] = o }
+      opt.on('-b') { |o| options[:build] = '--build' }
+    end.parse!
+
+    options[:dir] = options[:name].split(/(?=[A-Z])/).map(&:downcase).join('-')
+  end
+
+  def execute
+    puts "'#{command}' is not a valid command" unless COMMANDS.include? command
+    send(command)
+  end
+
+  def build
+    system("git clone https://github.com/joshddunn/fawkes #{options[:dir]}")
+    Dir.chdir(options[:dir])
+    system("docker-compose run app mix phx.new . --module #{options[:name]}")
+
+    system("sed -i -- 's/localhost/db/g' config/dev.exs")
+    system("sed -i -- 's/localhost/db/g' config/test.exs")
+
+    system("rm config/dev.exs--")
+    system("rm config/test.exs--")
+  end
+
+  def rise
+    system("docker-compose up #{options[:build]}")
+  end
+
+  def attach
+    name = Dir.pwd.split('/').last
+    out = `docker ps --filter name=#{name}_app`
+    id = out.split("\n").last.split(' ').first
+    system("docker attach #{id}")
+  end
+
+end
+
+Fawkes.new(ARGV).execute
